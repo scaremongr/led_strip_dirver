@@ -128,6 +128,29 @@ void SysTick_Handler(void)
 void DMA1_Channel2_3_IRQHandler(void)
 {
   /* USER CODE BEGIN DMA1_Channel2_3_IRQn 0 */
+  /* USER CODE BEGIN DMA1_Channel4_5_IRQn 0 */
+  if(LL_DMA_IsActiveFlag_HT3(DMA1))
+  {
+		LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_3);
+		LL_DMA_ClearFlag_GI3(DMA1);
+		LL_DMA_ClearFlag_HT3(DMA1);
+		LL_DMA_DisableIT_HT(DMA1, LL_DMA_CHANNEL_3);
+		LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_3);
+    TIM1_DMA1_HalfTransmit_Callback();
+  }
+	else if(LL_DMA_IsActiveFlag_TC3(DMA1))
+	{
+		LL_DMA_ClearFlag_GI3(DMA1);
+		LL_DMA_EnableIT_HT(DMA1, LL_DMA_CHANNEL_3);
+		
+		/* Call function Transmission complete Callback */
+		TIM1_DMA1_TransmitComplete_Callback();
+	}
+  else if(LL_DMA_IsActiveFlag_TE3(DMA1))
+  {
+    /* Call Error function */
+    TIM1_TransferError_Callback();
+  }
 
   /* USER CODE END DMA1_Channel2_3_IRQn 0 */
   
@@ -142,7 +165,28 @@ void DMA1_Channel2_3_IRQHandler(void)
 void DMA1_Channel4_5_IRQHandler(void)
 {
   /* USER CODE BEGIN DMA1_Channel4_5_IRQn 0 */
-
+  if(LL_DMA_IsActiveFlag_TC4(DMA1))
+  {
+    LL_DMA_ClearFlag_GI4(DMA1);
+    /* Call function Transmission complete Callback */
+    USART1_DMA1_TransmitComplete_Callback();
+  }
+  else if(LL_DMA_IsActiveFlag_TE4(DMA1))
+  {
+    /* Call Error function */
+    USART_TransferError_Callback();
+  }
+  if(LL_DMA_IsActiveFlag_TC5(DMA1))
+  {
+    LL_DMA_ClearFlag_GI5(DMA1);
+    /* Call function Reception complete Callback */
+    USART1_DMA1_ReceiveComplete_Callback();
+  }
+  else if(LL_DMA_IsActiveFlag_TE5(DMA1))
+  {
+    /* Call Error function */
+    USART_TransferError_Callback();
+  }
   /* USER CODE END DMA1_Channel4_5_IRQn 0 */
   
   /* USER CODE BEGIN DMA1_Channel4_5_IRQn 1 */

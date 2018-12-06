@@ -47,7 +47,9 @@
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-
+LedStripRxPacket packetLedStrip;
+PWM_t DMABuffer[RGB_BUFFER_SIZE];
+WsOperationsStatus wsTxStatus;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -58,9 +60,11 @@ static void MX_DMA_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_TIM1_Init(void);
 
+void DoConversionRgbToDma(void);
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
-
+void StartUartRxTransfers(void);
+void StartUartTxTransfers(void);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -75,7 +79,7 @@ static void MX_TIM1_Init(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+	
   /* USER CODE END 1 */
 
   /* MCU Configuration----------------------------------------------------------*/
@@ -91,7 +95,7 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-
+	
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -99,8 +103,9 @@ int main(void)
   MX_DMA_Init();
   MX_USART1_UART_Init();
   MX_TIM1_Init();
-  /* USER CODE BEGIN 2 */
 
+	/* USER CODE BEGIN 2 */
+	StartUartRxTransfers();	//Start waiting for data form uart
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -109,7 +114,7 @@ int main(void)
   {
 
   /* USER CODE END WHILE */
-
+	
   /* USER CODE BEGIN 3 */
 
   }
@@ -118,8 +123,6 @@ int main(void)
 }
 static void LL_Init(void)
 {
-  
-
   LL_APB1_GRP2_EnableClock(LL_APB1_GRP2_PERIPH_SYSCFG);
   LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_PWR);
 
@@ -214,10 +217,23 @@ static void MX_TIM1_Init(void)
   LL_DMA_SetPeriphSize(DMA1, LL_DMA_CHANNEL_3, LL_DMA_PDATAALIGN_HALFWORD);
 
   LL_DMA_SetMemorySize(DMA1, LL_DMA_CHANNEL_3, LL_DMA_MDATAALIGN_HALFWORD);
-
-  TIM_InitStruct.Prescaler = 59;
+	
+	LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_3,
+                         (uint32_t)DMABuffer,
+                         (uint32_t)&TIM1->CCR2,
+                         LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
+												 
+	LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_3, 60);
+	
+	
+	LL_DMA_EnableIT_HT(DMA1, LL_DMA_CHANNEL_3);
+	LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_3);
+  LL_DMA_EnableIT_TE(DMA1, LL_DMA_CHANNEL_3);
+	
+	
+  TIM_InitStruct.Prescaler = 0;
   TIM_InitStruct.CounterMode = LL_TIM_COUNTERMODE_UP;
-  TIM_InitStruct.Autoreload = 0;
+  TIM_InitStruct.Autoreload = 59;
   TIM_InitStruct.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
   TIM_InitStruct.RepetitionCounter = 0;
   LL_TIM_Init(TIM1, &TIM_InitStruct);
@@ -261,6 +277,9 @@ static void MX_TIM1_Init(void)
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
   GPIO_InitStruct.Alternate = LL_GPIO_AF_2;
   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+	
+	/* Enable DMA request on update event */
+  LL_TIM_EnableDMAReq_UPDATE(TIM1);
 
 }
 
@@ -313,6 +332,13 @@ static void MX_USART1_UART_Init(void)
   LL_DMA_SetMemorySize(DMA1, LL_DMA_CHANNEL_5, LL_DMA_MDATAALIGN_BYTE);
 
   LL_SYSCFG_SetRemapDMA_USART(LL_SYSCFG_USART1RX_RMP_DMA1CH5);
+	
+	LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_5,
+                         LL_USART_DMA_GetRegAddr(USART1, LL_USART_DMA_REG_DATA_RECEIVE),
+                         (uint32_t)&packetLedStrip,
+                         LL_DMA_GetDataTransferDirection(DMA1, LL_DMA_CHANNEL_5));
+												 
+	LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_5, sizeof(LedStripRxPacket));
 
   /* USART1_TX Init */
   LL_DMA_SetDataTransferDirection(DMA1, LL_DMA_CHANNEL_4, LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
@@ -345,9 +371,14 @@ static void MX_USART1_UART_Init(void)
   LL_USART_DisableOverrunDetect(USART1);
 
   LL_USART_ConfigAsyncMode(USART1);
+	
+  /* (5) Enable DMA transfer complete/error interrupts  */
+  LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_4);
+  LL_DMA_EnableIT_TE(DMA1, LL_DMA_CHANNEL_4);
+  LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_5);
+  LL_DMA_EnableIT_TE(DMA1, LL_DMA_CHANNEL_5);
 
   LL_USART_Enable(USART1);
-
 }
 
 /** 
@@ -378,7 +409,6 @@ static void MX_DMA_Init(void)
 */
 static void MX_GPIO_Init(void)
 {
-
   /* GPIO Ports Clock Enable */
   LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOF);
   LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
@@ -386,6 +416,142 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+/**
+  * @brief  This function initiates TX and RX DMA transfers by enabling DMA channels
+  * @param  None
+  * @retval None
+  */
+
+void StartUartRxTransfers(void)
+{
+  /* Enable DMA RX Interrupt */
+  LL_USART_EnableDMAReq_RX(USART1);
+
+  /* Enable DMA Channel Rx */
+  LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_5);
+}
+
+void StartUartTxTransfers(void)
+{
+	/* Enable DMA TX Interrupt */  
+	LL_USART_EnableDMAReq_TX(USART1);
+	
+	/* Enable DMA Channel Tx */
+  LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_4);
+}
+
+
+void Timer1DmaStart()
+{
+	/**********************************/
+  /* Start output signal generation */
+  /**********************************/
+
+  /* Enable TIM1 channel 3 */
+  LL_TIM_CC_EnableChannel(TIM1, LL_TIM_CHANNEL_CH2);
+  
+  /* Enable TIM1 outputs */
+  LL_TIM_EnableAllOutputs(TIM1);
+  
+  /* Enable counter */
+  LL_TIM_EnableCounter(TIM1);
+  
+  /* Force update generation */
+  //LL_TIM_GenerateEvent_UPDATE(TIM1);
+		
+	LL_TIM_EnableDMAReq_CC2(TIM1);
+	
+	LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_3);
+}
+
+//---------------------------------------------------
+//-------DMA Buffer prepare functions----------------
+//---------------------------------------------------
+
+void WS2812InitFirstTransaction(void)
+{
+	wsTxStatus.channelPosition[0] = 0;
+	wsTxStatus.channelPosition[1] = 0;
+	
+	wsTxStatus.channelSize[0] = 60;
+	
+	wsTxStatus.partPosition = 0;	
+	wsTxStatus.endTransactionFlag = 0;
+	
+	DoConversionRgbToDma();
+	Timer1DmaStart();
+}
+
+
+void ConvertRgbToDma(RGB_t *rgbBuffer, PWM_t *dmaBuffer)
+{
+	for(uint32_t n = 0; n < RGB_BUFFER_HALF_SIZE; n++)
+		RGB2PWM(rgbBuffer + n, DMABuffer + n);
+}
+
+inline void DoConversionRgbToDma()
+{
+	RGB_t *rgb_ptr = (RGB_t *)packetLedStrip.ch0_data;
+	PWM_t *pwm_ptr = wsTxStatus.partPosition ? DMABuffer + RGB_BUFFER_HALF_SIZE : DMABuffer;
+	
+	ConvertRgbToDma(rgb_ptr + wsTxStatus.channelPosition[0], pwm_ptr);
+	
+	wsTxStatus.partPosition ^= 1;	//change first part/second part dma buffer
+	wsTxStatus.channelPosition[0] += RGB_BUFFER_HALF_SIZE;
+	
+	if(wsTxStatus.channelPosition[0] + RGB_BUFFER_HALF_SIZE >= wsTxStatus.channelSize[0])
+	{
+		wsTxStatus.endTransactionFlag = 1;
+	}
+}
+
+//---------------------------------------------------
+//---------------------Calbacks----------------------
+//---------------------------------------------------
+/**
+  * @brief  Function called from DMA1 IRQ Handler when Tx transfer is completed (USART1)
+  * @param  None
+  * @retval None
+  */
+void USART1_DMA1_TransmitComplete_Callback(void)
+{
+
+}
+
+void USART1_DMA1_ReceiveComplete_Callback(void)
+{
+	/* DMA uart Tx transfer completed */
+
+	WS2812InitFirstTransaction();
+}
+
+void USART_TransferError_Callback(void)
+{
+	
+}
+
+//Callbacks for Timer1
+void TIM1_DMA1_HalfTransmit_Callback(void)
+{
+	DoConversionRgbToDma();
+}
+
+void TIM1_DMA1_TransmitComplete_Callback(void)
+{
+	if(wsTxStatus.endTransactionFlag == 1)
+	{
+		LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_3);
+		LL_TIM_DisableDMAReq_CC2(TIM1);
+		LL_TIM_OC_SetCompareCH2(TIM1, 0);
+	}
+	
+	DoConversionRgbToDma();
+}
+
+void TIM1_TransferError_Callback(void)
+{
+	
+}
 
 /* USER CODE END 4 */
 

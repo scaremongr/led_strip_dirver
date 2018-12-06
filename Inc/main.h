@@ -56,7 +56,7 @@
 #include "stm32f0xx_ll_gpio.h"
 
 /* USER CODE BEGIN Includes */
-
+#include "ws2812_defines.h"
 /* USER CODE END Includes */
 
 /* Private define ------------------------------------------------------------*/
@@ -82,7 +82,13 @@
 /* #define USE_FULL_ASSERT    1U */
 
 /* USER CODE BEGIN Private defines */
+void USART1_DMA1_TransmitComplete_Callback(void);
+void USART1_DMA1_ReceiveComplete_Callback(void);
+void USART_TransferError_Callback(void);
 
+void TIM1_DMA1_HalfTransmit_Callback(void);
+void TIM1_DMA1_TransmitComplete_Callback(void);
+void TIM1_TransferError_Callback(void);
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
