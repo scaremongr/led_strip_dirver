@@ -35,7 +35,7 @@
 #include "stm32f0xx_it.h"
 
 /* USER CODE BEGIN 0 */
-
+#include "bit_ops.h"
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
@@ -131,20 +131,36 @@ void DMA1_Channel2_3_IRQHandler(void)
   /* USER CODE BEGIN DMA1_Channel4_5_IRQn 0 */
   if(LL_DMA_IsActiveFlag_HT3(DMA1))
   {
-		LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_3);
+		//LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_3);
 		LL_DMA_ClearFlag_GI3(DMA1);
-		LL_DMA_ClearFlag_HT3(DMA1);
-		LL_DMA_DisableIT_HT(DMA1, LL_DMA_CHANNEL_3);
-		LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_3);
-    TIM1_DMA1_HalfTransmit_Callback();
+		//LL_DMA_ClearFlag_HT3(DMA1);
+		//LL_DMA_DisableIT_HT(DMA1, LL_DMA_CHANNEL_3);
+		//LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_3);
+    //TIM1_DMA1_HalfTransmit_Callback();
+		
+		if(HalfBufferTransfered() == 1)
+		{
+			Timer1DmaStop();
+			StartUartRxTransfers();
+		}
+
+		DoConversionRgbToDmaFirstPart();
   }
 	else if(LL_DMA_IsActiveFlag_TC3(DMA1))
 	{
 		LL_DMA_ClearFlag_GI3(DMA1);
-		LL_DMA_EnableIT_HT(DMA1, LL_DMA_CHANNEL_3);
+		//LL_DMA_EnableIT_HT(DMA1, LL_DMA_CHANNEL_3);
 		
 		/* Call function Transmission complete Callback */
-		TIM1_DMA1_TransmitComplete_Callback();
+		//TIM1_DMA1_TransmitComplete_Callback();
+		
+		if(HalfBufferTransfered() == 1)
+		{
+			Timer1DmaStop();
+			StartUartRxTransfers();
+		}
+	
+		DoConversionRgbToDmaSecondPart();
 	}
   else if(LL_DMA_IsActiveFlag_TE3(DMA1))
   {

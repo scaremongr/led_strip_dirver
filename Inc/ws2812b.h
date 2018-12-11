@@ -15,6 +15,8 @@
 
 #define WS2812B_PULSE_HIGH      43
 #define WS2812B_PULSE_LOW       17
+#define WS2812B_NO_PULSE        0
+
 
 
 

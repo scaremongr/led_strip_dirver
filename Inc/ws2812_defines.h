@@ -27,6 +27,8 @@ typedef struct
 {
 	uint8_t address;
 	uint8_t mode;
+	uint8_t ch0_size;
+	uint8_t ch1_size;
 	uint8_t ch0_data[MAX_LED_COUNT_PER_CHN * LEDS_IN_ONE_LED_PACKAGE];
 	uint8_t ch1_data[MAX_LED_COUNT_PER_CHN * LEDS_IN_ONE_LED_PACKAGE];
 } LedStripRxPacket;
@@ -47,9 +49,18 @@ void RGB2PWM(RGB_t *rgb, PWM_t *pwm);
 
 typedef struct
 {
-	uint8_t channelPosition[2];
-	uint8_t channelSize[2];
-	uint8_t partPosition; 							//for hafl/full end of circular transaction
+	uint8_t ch0Size;
+	uint8_t ch1Size;
+	
+	uint8_t ch0ConversionRemain;
+	uint8_t ch1ConversionRemain;
+	uint8_t ch0TransmissionRemain;
+	uint8_t ch1TransmissionRemain;
+	
+	PWM_t *FirstPartPwmBuf;
+	PWM_t *SecondPartPwmBuf;
+	RGB_t *RgbBufferPtr;
+	
 	uint8_t endTransactionFlag;
 } WsOperationsStatus;
 

@@ -40,7 +40,7 @@
 #include "main.h"
 
 /* USER CODE BEGIN Includes */
-
+#include "bit_ops.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -50,6 +50,9 @@
 LedStripRxPacket packetLedStrip;
 PWM_t DMABuffer[RGB_BUFFER_SIZE];
 WsOperationsStatus wsTxStatus;
+
+uint32_t AppFlags;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -60,11 +63,10 @@ static void MX_DMA_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_TIM1_Init(void);
 
-void DoConversionRgbToDma(void);
+
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
-void StartUartRxTransfers(void);
-void StartUartTxTransfers(void);
+
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
@@ -114,7 +116,7 @@ int main(void)
   {
 
   /* USER CODE END WHILE */
-	
+
   /* USER CODE BEGIN 3 */
 
   }
@@ -219,11 +221,11 @@ static void MX_TIM1_Init(void)
   LL_DMA_SetMemorySize(DMA1, LL_DMA_CHANNEL_3, LL_DMA_MDATAALIGN_HALFWORD);
 	
 	LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_3,
-                         (uint32_t)DMABuffer,
+                         (uint32_t)&DMABuffer,
                          (uint32_t)&TIM1->CCR2,
                          LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
 												 
-	LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_3, 60);
+	LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_3, RGB_BUFFER_SIZE * 24);
 	
 	
 	LL_DMA_EnableIT_HT(DMA1, LL_DMA_CHANNEL_3);
@@ -245,7 +247,7 @@ static void MX_TIM1_Init(void)
   TIM_OC_InitStruct.OCMode = LL_TIM_OCMODE_PWM1;
   TIM_OC_InitStruct.OCState = LL_TIM_OCSTATE_DISABLE;
   TIM_OC_InitStruct.OCNState = LL_TIM_OCSTATE_DISABLE;
-  TIM_OC_InitStruct.CompareValue = 30;
+  TIM_OC_InitStruct.CompareValue = 0;
   TIM_OC_InitStruct.OCPolarity = LL_TIM_OCPOLARITY_HIGH;
   TIM_OC_InitStruct.OCNPolarity = LL_TIM_OCPOLARITY_HIGH;
   TIM_OC_InitStruct.OCIdleState = LL_TIM_OCIDLESTATE_LOW;
@@ -272,14 +274,14 @@ static void MX_TIM1_Init(void)
   */
   GPIO_InitStruct.Pin = LL_GPIO_PIN_9;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
-  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_HIGH;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
   GPIO_InitStruct.Alternate = LL_GPIO_AF_2;
+	
   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 	
-	/* Enable DMA request on update event */
-  LL_TIM_EnableDMAReq_UPDATE(TIM1);
+
 
 }
 
@@ -422,13 +424,18 @@ static void MX_GPIO_Init(void)
   * @retval None
   */
 
+static int uart_start = 0;
 void StartUartRxTransfers(void)
 {
+	LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_5, sizeof(LedStripRxPacket));
+	
   /* Enable DMA RX Interrupt */
   LL_USART_EnableDMAReq_RX(USART1);
 
   /* Enable DMA Channel Rx */
   LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_5);
+	
+	uart_start++;
 }
 
 void StartUartTxTransfers(void)
@@ -441,12 +448,20 @@ void StartUartTxTransfers(void)
 }
 
 
+void StopUartRxTransfer(void)
+{
+	LL_USART_DisableDMAReq_TX(USART1);
+	
+	/* Enable DMA Channel Tx */
+  LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_5);
+}
+
+
 void Timer1DmaStart()
 {
-	/**********************************/
-  /* Start output signal generation */
-  /**********************************/
-
+	/* Set data transfer length */
+	LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_3, RGB_BUFFER_SIZE * 24);
+	
   /* Enable TIM1 channel 3 */
   LL_TIM_CC_EnableChannel(TIM1, LL_TIM_CHANNEL_CH2);
   
@@ -457,11 +472,20 @@ void Timer1DmaStart()
   LL_TIM_EnableCounter(TIM1);
   
   /* Force update generation */
-  //LL_TIM_GenerateEvent_UPDATE(TIM1);
+  LL_TIM_GenerateEvent_UPDATE(TIM1);
 		
 	LL_TIM_EnableDMAReq_CC2(TIM1);
 	
+	LL_TIM_EnableARRPreload(TIM1);
+	
 	LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_3);
+}
+
+void Timer1DmaStop(void)
+{
+	LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_3);
+	
+	LL_TIM_OC_SetCompareCH2(TIM1, WS2812B_NO_PULSE);
 }
 
 //---------------------------------------------------
@@ -470,39 +494,125 @@ void Timer1DmaStart()
 
 void WS2812InitFirstTransaction(void)
 {
-	wsTxStatus.channelPosition[0] = 0;
-	wsTxStatus.channelPosition[1] = 0;
+	wsTxStatus.ch0Size = packetLedStrip.ch0_size;
+	wsTxStatus.ch1Size = packetLedStrip.ch1_size;
 	
-	wsTxStatus.channelSize[0] = 60;
+	wsTxStatus.ch0ConversionRemain = packetLedStrip.ch0_size;
+	wsTxStatus.ch1ConversionRemain = packetLedStrip.ch1_size;
 	
-	wsTxStatus.partPosition = 0;	
+	wsTxStatus.ch0TransmissionRemain = packetLedStrip.ch0_size;
+	wsTxStatus.ch1TransmissionRemain = packetLedStrip.ch1_size;
+	
+	wsTxStatus.FirstPartPwmBuf = (PWM_t*)&DMABuffer;
+	wsTxStatus.SecondPartPwmBuf = (PWM_t*)&DMABuffer[RGB_BUFFER_HALF_SIZE];	
+	wsTxStatus.RgbBufferPtr = (RGB_t*)packetLedStrip.ch0_data;
+		
 	wsTxStatus.endTransactionFlag = 0;
 	
-	DoConversionRgbToDma();
+	DoConversionRgbToDmaFirstPart();
+	DoConversionRgbToDmaSecondPart();
 	Timer1DmaStart();
 }
-
 
 void ConvertRgbToDma(RGB_t *rgbBuffer, PWM_t *dmaBuffer)
 {
 	for(uint32_t n = 0; n < RGB_BUFFER_HALF_SIZE; n++)
-		RGB2PWM(rgbBuffer + n, DMABuffer + n);
+	{
+		uint8_t mask = 0x80;
+    uint32_t i;
+    for (i = 0; i < 8; i++)
+    {
+        wsTxStatus.FirstPartPwmBuf[n].r[i] = wsTxStatus.RgbBufferPtr[n].r & mask ? WS2812B_PULSE_HIGH : WS2812B_PULSE_LOW;
+        wsTxStatus.FirstPartPwmBuf[n].g[i] = wsTxStatus.RgbBufferPtr[n].g & mask ? WS2812B_PULSE_HIGH : WS2812B_PULSE_LOW;
+        wsTxStatus.FirstPartPwmBuf[n].b[i] = wsTxStatus.RgbBufferPtr[n].b & mask ? WS2812B_PULSE_HIGH : WS2812B_PULSE_LOW;
+
+        mask >>= 1;
+    }
+	}
 }
 
-inline void DoConversionRgbToDma()
+inline void DoConversionRgbToDmaFirstPart()
 {
-	RGB_t *rgb_ptr = (RGB_t *)packetLedStrip.ch0_data;
-	PWM_t *pwm_ptr = wsTxStatus.partPosition ? DMABuffer + RGB_BUFFER_HALF_SIZE : DMABuffer;
+	uint32_t convert_size = wsTxStatus.ch0ConversionRemain >= RGB_BUFFER_HALF_SIZE ? RGB_BUFFER_HALF_SIZE : wsTxStatus.ch0ConversionRemain;
 	
-	ConvertRgbToDma(rgb_ptr + wsTxStatus.channelPosition[0], pwm_ptr);
+	uint32_t n;
+	uint32_t i;
 	
-	wsTxStatus.partPosition ^= 1;	//change first part/second part dma buffer
-	wsTxStatus.channelPosition[0] += RGB_BUFFER_HALF_SIZE;
-	
-	if(wsTxStatus.channelPosition[0] + RGB_BUFFER_HALF_SIZE >= wsTxStatus.channelSize[0])
+	for(n = 0; n < convert_size; n++)
 	{
-		wsTxStatus.endTransactionFlag = 1;
+		uint8_t mask = 0x80;
+    
+    for (i = 0; i < 8; i++)
+    {
+        wsTxStatus.FirstPartPwmBuf[n].r[i] = wsTxStatus.RgbBufferPtr[n].r & mask ? WS2812B_PULSE_HIGH : WS2812B_PULSE_LOW;
+        wsTxStatus.FirstPartPwmBuf[n].g[i] = wsTxStatus.RgbBufferPtr[n].g & mask ? WS2812B_PULSE_HIGH : WS2812B_PULSE_LOW;
+        wsTxStatus.FirstPartPwmBuf[n].b[i] = wsTxStatus.RgbBufferPtr[n].b & mask ? WS2812B_PULSE_HIGH : WS2812B_PULSE_LOW;
+
+        mask >>= 1;
+    }
 	}
+	
+	//Fill dma buffer for the end with low level signal if the rgb buffer is over
+	for(; n < RGB_BUFFER_HALF_SIZE; n++)
+	{
+		for (i = 0; i < 8; i++)
+    {
+        wsTxStatus.FirstPartPwmBuf[n].r[i] = WS2812B_NO_PULSE;
+        wsTxStatus.FirstPartPwmBuf[n].g[i] = WS2812B_NO_PULSE;
+        wsTxStatus.FirstPartPwmBuf[n].b[i] = WS2812B_NO_PULSE;
+    }
+	}
+	
+	wsTxStatus.ch0ConversionRemain -= convert_size;
+	wsTxStatus.RgbBufferPtr += convert_size;
+	
+}
+
+inline void DoConversionRgbToDmaSecondPart()
+{
+	uint32_t convert_size = wsTxStatus.ch0ConversionRemain >= RGB_BUFFER_HALF_SIZE ? RGB_BUFFER_HALF_SIZE : wsTxStatus.ch0ConversionRemain;
+	
+	uint32_t n;
+	uint32_t i;
+	
+	for(n = 0; n < convert_size; n++)
+	{
+		uint8_t mask = 0x80;
+    
+    for (i = 0; i < 8; i++)
+    {
+        wsTxStatus.SecondPartPwmBuf[n].r[i] = wsTxStatus.RgbBufferPtr[n].r & mask ? WS2812B_PULSE_HIGH : WS2812B_PULSE_LOW;
+        wsTxStatus.SecondPartPwmBuf[n].g[i] = wsTxStatus.RgbBufferPtr[n].g & mask ? WS2812B_PULSE_HIGH : WS2812B_PULSE_LOW;
+        wsTxStatus.SecondPartPwmBuf[n].b[i] = wsTxStatus.RgbBufferPtr[n].b & mask ? WS2812B_PULSE_HIGH : WS2812B_PULSE_LOW;
+
+        mask >>= 1;
+    }
+	}
+	
+	//Fill dma buffer for the end with low level signal if the rgb buffer is over
+	for(; n < RGB_BUFFER_HALF_SIZE; n++)
+	{
+		for (i = 0; i < 8; i++)
+    {
+        wsTxStatus.SecondPartPwmBuf[n].r[i] = WS2812B_NO_PULSE;
+        wsTxStatus.SecondPartPwmBuf[n].g[i] = WS2812B_NO_PULSE;
+        wsTxStatus.SecondPartPwmBuf[n].b[i] = WS2812B_NO_PULSE;
+    }
+	}
+	
+	wsTxStatus.ch0ConversionRemain -= convert_size;
+	wsTxStatus.RgbBufferPtr += convert_size;
+}
+
+//If all data has been transferred return 1 else 0
+inline uint8_t HalfBufferTransfered(void)
+{
+	wsTxStatus.ch0TransmissionRemain -= wsTxStatus.ch0TransmissionRemain >= RGB_BUFFER_HALF_SIZE ? 
+																			RGB_BUFFER_HALF_SIZE : wsTxStatus.ch0TransmissionRemain;
+	if(wsTxStatus.ch0TransmissionRemain == 0)
+		return 1;
+		
+	return 0;
 }
 
 //---------------------------------------------------
@@ -518,10 +628,13 @@ void USART1_DMA1_TransmitComplete_Callback(void)
 
 }
 
+static int uart_count = 0;
 void USART1_DMA1_ReceiveComplete_Callback(void)
 {
 	/* DMA uart Tx transfer completed */
 
+	uart_count++;
+	StopUartRxTransfer();
 	WS2812InitFirstTransaction();
 }
 
@@ -533,7 +646,7 @@ void USART_TransferError_Callback(void)
 //Callbacks for Timer1
 void TIM1_DMA1_HalfTransmit_Callback(void)
 {
-	DoConversionRgbToDma();
+	//DoConversionRgbToDma();
 }
 
 void TIM1_DMA1_TransmitComplete_Callback(void)
@@ -545,7 +658,7 @@ void TIM1_DMA1_TransmitComplete_Callback(void)
 		LL_TIM_OC_SetCompareCH2(TIM1, 0);
 	}
 	
-	DoConversionRgbToDma();
+	//DoConversionRgbToDma();
 }
 
 void TIM1_TransferError_Callback(void)

@@ -57,6 +57,14 @@
 
 /* USER CODE BEGIN Includes */
 #include "ws2812_defines.h"
+#include "ws2812b.h"
+
+
+#define TIM_DMA_HALF_TRASFER_COMPLETE 			(1 << 0)			
+#define TIM_DMA_TRASFER_COMPLETE 						(1 << 1)
+
+extern uint32_t AppFlags;
+
 /* USER CODE END Includes */
 
 /* Private define ------------------------------------------------------------*/
@@ -89,6 +97,17 @@ void USART_TransferError_Callback(void);
 void TIM1_DMA1_HalfTransmit_Callback(void);
 void TIM1_DMA1_TransmitComplete_Callback(void);
 void TIM1_TransferError_Callback(void);
+
+void DoConversionRgbToDmaFirstPart(void);
+void DoConversionRgbToDmaSecondPart(void);
+
+uint8_t HalfBufferTransfered(void);
+
+void StartUartRxTransfers(void);
+void StartUartTxTransfers(void);
+
+void Timer1DmaStart(void);
+void Timer1DmaStop(void);
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
