@@ -4,9 +4,6 @@
 
 #include <stdint.h>
 
-#define WS2812B_USE_GAMMA_CORRECTION
-#define WS2812B_USE_PRECALCULATED_GAMMA_TABLE
-
 
 #define WS2812B_START_SIZE      2
 

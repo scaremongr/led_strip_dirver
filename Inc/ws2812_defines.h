@@ -39,29 +39,24 @@ typedef struct
 #pragma pack(push, 1)
 typedef struct
 {
-    uint16_t g[8], r[8], b[8];
+    uint8_t g[8], r[8], b[8];
 } PWM_t;
 #pragma pack(pop)
-
-extern PWM_t DMABuffer[RGB_BUFFER_SIZE];
 
 void RGB2PWM(RGB_t *rgb, PWM_t *pwm);
 
 typedef struct
 {
-	uint8_t ch0Size;
-	uint8_t ch1Size;
+	PWM_t dmaBuffer[RGB_BUFFER_SIZE];
+
+	uint8_t stripLedCount;
+	uint8_t conversionRemain;
+	uint8_t transmissionRemain;
 	
-	uint8_t ch0ConversionRemain;
-	uint8_t ch1ConversionRemain;
-	uint8_t ch0TransmissionRemain;
-	uint8_t ch1TransmissionRemain;
+	PWM_t *firstPartPwmBuf;
+	PWM_t *secondPartPwmBuf;
+	RGB_t *rgbBufferPtr;
 	
-	PWM_t *FirstPartPwmBuf;
-	PWM_t *SecondPartPwmBuf;
-	RGB_t *RgbBufferPtr;
-	
-	uint8_t endTransactionFlag;
 } WsOperationsStatus;
 
 

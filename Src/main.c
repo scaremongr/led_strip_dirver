@@ -1,61 +1,13 @@
 
-/**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  ** This notice applies to any and all portions of this file
-  * that are not between comment pairs USER CODE BEGIN and
-  * USER CODE END. Other portions of this file, whether 
-  * inserted by the user or by software development tools
-  * are owned by their respective copyright owners.
-  *
-  * COPYRIGHT(c) 2018 STMicroelectronics
-  *
-  * Redistribution and use in source and binary forms, with or without modification,
-  * are permitted provided that the following conditions are met:
-  *   1. Redistributions of source code must retain the above copyright notice,
-  *      this list of conditions and the following disclaimer.
-  *   2. Redistributions in binary form must reproduce the above copyright notice,
-  *      this list of conditions and the following disclaimer in the documentation
-  *      and/or other materials provided with the distribution.
-  *   3. Neither the name of STMicroelectronics nor the names of its contributors
-  *      may be used to endorse or promote products derived from this software
-  *      without specific prior written permission.
-  *
-  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-  *
-  ******************************************************************************
-  */
-/* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
-/* USER CODE BEGIN Includes */
 #include "bit_ops.h"
-/* USER CODE END Includes */
 
-/* Private variables ---------------------------------------------------------*/
-
-/* USER CODE BEGIN PV */
-/* Private variables ---------------------------------------------------------*/
 LedStripRxPacket packetLedStrip;
-PWM_t DMABuffer[RGB_BUFFER_SIZE];
-WsOperationsStatus wsTxStatus;
 
-uint32_t AppFlags;
+WsOperationsStatus wsTxStatus[2];
 
-/* USER CODE END PV */
 
-/* Private function prototypes -----------------------------------------------*/
 static void LL_Init(void);
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
@@ -64,41 +16,18 @@ static void MX_USART1_UART_Init(void);
 static void MX_TIM1_Init(void);
 
 
-/* USER CODE BEGIN PFP */
-/* Private function prototypes -----------------------------------------------*/
-
-/* USER CODE END PFP */
-
-/* USER CODE BEGIN 0 */
-
-/* USER CODE END 0 */
 
 /**
   * @brief  The application entry point.
-  *
   * @retval None
   */
 int main(void)
 {
-  /* USER CODE BEGIN 1 */
-	
-  /* USER CODE END 1 */
-
-  /* MCU Configuration----------------------------------------------------------*/
-
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   LL_Init();
 
-  /* USER CODE BEGIN Init */
-
-  /* USER CODE END Init */
-
   /* Configure the system clock */
   SystemClock_Config();
-
-  /* USER CODE BEGIN SysInit */
-	
-  /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
@@ -106,23 +35,16 @@ int main(void)
   MX_USART1_UART_Init();
   MX_TIM1_Init();
 
-	/* USER CODE BEGIN 2 */
-	StartUartRxTransfers();	//Start waiting for data form uart
-  /* USER CODE END 2 */
+	/* Start waiting for data form uart */
+	StartUartRxTransfers();	
 
   /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
   while (1)
   {
 
-  /* USER CODE END WHILE */
-
-  /* USER CODE BEGIN 3 */
-
   }
-  /* USER CODE END 3 */
-
 }
+
 static void LL_Init(void)
 {
   LL_APB1_GRP2_EnableClock(LL_APB1_GRP2_PERIPH_SYSCFG);
@@ -135,7 +57,6 @@ static void LL_Init(void)
   NVIC_SetPriority(PendSV_IRQn, 0);
   /* SysTick_IRQn interrupt configuration */
   NVIC_SetPriority(SysTick_IRQn, 0);
-
 }
 
 /**
@@ -193,7 +114,6 @@ void SystemClock_Config(void)
 /* TIM1 init function */
 static void MX_TIM1_Init(void)
 {
-
   LL_TIM_InitTypeDef TIM_InitStruct;
   LL_TIM_OC_InitTypeDef TIM_OC_InitStruct;
   LL_TIM_BDTR_InitTypeDef TIM_BDTRInitStruct;
@@ -204,35 +124,27 @@ static void MX_TIM1_Init(void)
   LL_APB1_GRP2_EnableClock(LL_APB1_GRP2_PERIPH_TIM1);
 
   /* TIM1 DMA Init */
-  
-  /* TIM1_CH2 Init */
   LL_DMA_SetDataTransferDirection(DMA1, LL_DMA_CHANNEL_3, LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
-
   LL_DMA_SetChannelPriorityLevel(DMA1, LL_DMA_CHANNEL_3, LL_DMA_PRIORITY_HIGH);
-
   LL_DMA_SetMode(DMA1, LL_DMA_CHANNEL_3, LL_DMA_MODE_CIRCULAR);
-
   LL_DMA_SetPeriphIncMode(DMA1, LL_DMA_CHANNEL_3, LL_DMA_PERIPH_NOINCREMENT);
-
   LL_DMA_SetMemoryIncMode(DMA1, LL_DMA_CHANNEL_3, LL_DMA_MEMORY_INCREMENT);
-
   LL_DMA_SetPeriphSize(DMA1, LL_DMA_CHANNEL_3, LL_DMA_PDATAALIGN_HALFWORD);
-
-  LL_DMA_SetMemorySize(DMA1, LL_DMA_CHANNEL_3, LL_DMA_MDATAALIGN_HALFWORD);
+  LL_DMA_SetMemorySize(DMA1, LL_DMA_CHANNEL_3, LL_DMA_MDATAALIGN_BYTE);
 	
 	LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_3,
-                         (uint32_t)&DMABuffer,
+                         (uint32_t)&wsTxStatus[0].dmaBuffer,
                          (uint32_t)&TIM1->CCR2,
                          LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
 												 
 	LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_3, RGB_BUFFER_SIZE * 24);
 	
-	
 	LL_DMA_EnableIT_HT(DMA1, LL_DMA_CHANNEL_3);
 	LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_3);
   LL_DMA_EnableIT_TE(DMA1, LL_DMA_CHANNEL_3);
 	
-	
+
+	/* TIM1_CH2 Init */
   TIM_InitStruct.Prescaler = 0;
   TIM_InitStruct.CounterMode = LL_TIM_COUNTERMODE_UP;
   TIM_InitStruct.Autoreload = 59;
@@ -280,15 +192,11 @@ static void MX_TIM1_Init(void)
   GPIO_InitStruct.Alternate = LL_GPIO_AF_2;
 	
   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-	
-
-
 }
 
 /* USART1 init function */
 static void MX_USART1_UART_Init(void)
 {
-
   LL_USART_InitTypeDef USART_InitStruct;
 
   LL_GPIO_InitTypeDef GPIO_InitStruct;
@@ -320,19 +228,12 @@ static void MX_USART1_UART_Init(void)
   
   /* USART1_RX Init */
   LL_DMA_SetDataTransferDirection(DMA1, LL_DMA_CHANNEL_5, LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
-
   LL_DMA_SetChannelPriorityLevel(DMA1, LL_DMA_CHANNEL_5, LL_DMA_PRIORITY_HIGH);
-
   LL_DMA_SetMode(DMA1, LL_DMA_CHANNEL_5, LL_DMA_MODE_NORMAL);
-
   LL_DMA_SetPeriphIncMode(DMA1, LL_DMA_CHANNEL_5, LL_DMA_PERIPH_NOINCREMENT);
-
   LL_DMA_SetMemoryIncMode(DMA1, LL_DMA_CHANNEL_5, LL_DMA_MEMORY_INCREMENT);
-
   LL_DMA_SetPeriphSize(DMA1, LL_DMA_CHANNEL_5, LL_DMA_PDATAALIGN_BYTE);
-
   LL_DMA_SetMemorySize(DMA1, LL_DMA_CHANNEL_5, LL_DMA_MDATAALIGN_BYTE);
-
   LL_SYSCFG_SetRemapDMA_USART(LL_SYSCFG_USART1RX_RMP_DMA1CH5);
 	
 	LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_5,
@@ -344,21 +245,14 @@ static void MX_USART1_UART_Init(void)
 
   /* USART1_TX Init */
   LL_DMA_SetDataTransferDirection(DMA1, LL_DMA_CHANNEL_4, LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
-
   LL_DMA_SetChannelPriorityLevel(DMA1, LL_DMA_CHANNEL_4, LL_DMA_PRIORITY_HIGH);
-
   LL_DMA_SetMode(DMA1, LL_DMA_CHANNEL_4, LL_DMA_MODE_NORMAL);
-
   LL_DMA_SetPeriphIncMode(DMA1, LL_DMA_CHANNEL_4, LL_DMA_PERIPH_NOINCREMENT);
-
   LL_DMA_SetMemoryIncMode(DMA1, LL_DMA_CHANNEL_4, LL_DMA_MEMORY_INCREMENT);
-
   LL_DMA_SetPeriphSize(DMA1, LL_DMA_CHANNEL_4, LL_DMA_PDATAALIGN_BYTE);
-
   LL_DMA_SetMemorySize(DMA1, LL_DMA_CHANNEL_4, LL_DMA_MDATAALIGN_BYTE);
-
   LL_SYSCFG_SetRemapDMA_USART(LL_SYSCFG_USART1TX_RMP_DMA1CH4);
-
+	
   USART_InitStruct.BaudRate = 921600;
   USART_InitStruct.DataWidth = LL_USART_DATAWIDTH_8B;
   USART_InitStruct.StopBits = LL_USART_STOPBITS_1;
@@ -402,13 +296,6 @@ static void MX_DMA_Init(void)
 
 }
 
-/** Configure pins as 
-        * Analog 
-        * Input 
-        * Output
-        * EVENT_OUT
-        * EXTI
-*/
 static void MX_GPIO_Init(void)
 {
   /* GPIO Ports Clock Enable */
@@ -417,14 +304,11 @@ static void MX_GPIO_Init(void)
 
 }
 
-/* USER CODE BEGIN 4 */
 /**
   * @brief  This function initiates TX and RX DMA transfers by enabling DMA channels
   * @param  None
   * @retval None
   */
-
-static int uart_start = 0;
 void StartUartRxTransfers(void)
 {
 	LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_5, sizeof(LedStripRxPacket));
@@ -434,8 +318,6 @@ void StartUartRxTransfers(void)
 
   /* Enable DMA Channel Rx */
   LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_5);
-	
-	uart_start++;
 }
 
 void StartUartTxTransfers(void)
@@ -447,15 +329,13 @@ void StartUartTxTransfers(void)
   LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_4);
 }
 
-
 void StopUartRxTransfer(void)
 {
 	LL_USART_DisableDMAReq_TX(USART1);
 	
-	/* Enable DMA Channel Tx */
+	/* Disable DMA Channel Tx */
   LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_5);
 }
-
 
 void Timer1DmaStart()
 {
@@ -494,46 +374,32 @@ void Timer1DmaStop(void)
 
 void WS2812InitFirstTransaction(void)
 {
-	wsTxStatus.ch0Size = packetLedStrip.ch0_size;
-	wsTxStatus.ch1Size = packetLedStrip.ch1_size;
+	wsTxStatus[0].stripLedCount = packetLedStrip.ch0_size;
+	wsTxStatus[1].stripLedCount = packetLedStrip.ch1_size;
 	
-	wsTxStatus.ch0ConversionRemain = packetLedStrip.ch0_size;
-	wsTxStatus.ch1ConversionRemain = packetLedStrip.ch1_size;
+	wsTxStatus[0].conversionRemain = packetLedStrip.ch0_size;
+	wsTxStatus[1].conversionRemain = packetLedStrip.ch1_size;
 	
-	wsTxStatus.ch0TransmissionRemain = packetLedStrip.ch0_size;
-	wsTxStatus.ch1TransmissionRemain = packetLedStrip.ch1_size;
+	wsTxStatus[0].transmissionRemain = packetLedStrip.ch0_size;
+	wsTxStatus[1].transmissionRemain = packetLedStrip.ch1_size;
 	
-	wsTxStatus.FirstPartPwmBuf = (PWM_t*)&DMABuffer;
-	wsTxStatus.SecondPartPwmBuf = (PWM_t*)&DMABuffer[RGB_BUFFER_HALF_SIZE];	
-	wsTxStatus.RgbBufferPtr = (RGB_t*)packetLedStrip.ch0_data;
+	wsTxStatus[0].firstPartPwmBuf = (PWM_t*)&wsTxStatus[0].dmaBuffer;
+	wsTxStatus[0].secondPartPwmBuf = (PWM_t*)&wsTxStatus[0].dmaBuffer[RGB_BUFFER_HALF_SIZE];	
+	wsTxStatus[0].rgbBufferPtr = (RGB_t*)packetLedStrip.ch0_data;
+	
+	wsTxStatus[1].firstPartPwmBuf = (PWM_t*)&wsTxStatus[1].dmaBuffer;
+	wsTxStatus[1].secondPartPwmBuf = (PWM_t*)&wsTxStatus[1].dmaBuffer[RGB_BUFFER_HALF_SIZE];	
+	wsTxStatus[1].rgbBufferPtr = (RGB_t*)packetLedStrip.ch1_data;
 		
-	wsTxStatus.endTransactionFlag = 0;
-	
-	DoConversionRgbToDmaFirstPart();
-	DoConversionRgbToDmaSecondPart();
+	DoConversionRgbToDmaFirstPart(&wsTxStatus[0]);
+	DoConversionRgbToDmaSecondPart(&wsTxStatus[0]);
 	Timer1DmaStart();
 }
 
-void ConvertRgbToDma(RGB_t *rgbBuffer, PWM_t *dmaBuffer)
-{
-	for(uint32_t n = 0; n < RGB_BUFFER_HALF_SIZE; n++)
-	{
-		uint8_t mask = 0x80;
-    uint32_t i;
-    for (i = 0; i < 8; i++)
-    {
-        wsTxStatus.FirstPartPwmBuf[n].r[i] = wsTxStatus.RgbBufferPtr[n].r & mask ? WS2812B_PULSE_HIGH : WS2812B_PULSE_LOW;
-        wsTxStatus.FirstPartPwmBuf[n].g[i] = wsTxStatus.RgbBufferPtr[n].g & mask ? WS2812B_PULSE_HIGH : WS2812B_PULSE_LOW;
-        wsTxStatus.FirstPartPwmBuf[n].b[i] = wsTxStatus.RgbBufferPtr[n].b & mask ? WS2812B_PULSE_HIGH : WS2812B_PULSE_LOW;
 
-        mask >>= 1;
-    }
-	}
-}
-
-inline void DoConversionRgbToDmaFirstPart()
+inline void DoConversionRgbToDmaFirstPart(WsOperationsStatus *opStatus)
 {
-	uint32_t convert_size = wsTxStatus.ch0ConversionRemain >= RGB_BUFFER_HALF_SIZE ? RGB_BUFFER_HALF_SIZE : wsTxStatus.ch0ConversionRemain;
+	uint32_t convert_size = opStatus->conversionRemain >= RGB_BUFFER_HALF_SIZE ? RGB_BUFFER_HALF_SIZE : opStatus->conversionRemain;
 	
 	uint32_t n;
 	uint32_t i;
@@ -544,33 +410,33 @@ inline void DoConversionRgbToDmaFirstPart()
     
     for (i = 0; i < 8; i++)
     {
-        wsTxStatus.FirstPartPwmBuf[n].r[i] = wsTxStatus.RgbBufferPtr[n].r & mask ? WS2812B_PULSE_HIGH : WS2812B_PULSE_LOW;
-        wsTxStatus.FirstPartPwmBuf[n].g[i] = wsTxStatus.RgbBufferPtr[n].g & mask ? WS2812B_PULSE_HIGH : WS2812B_PULSE_LOW;
-        wsTxStatus.FirstPartPwmBuf[n].b[i] = wsTxStatus.RgbBufferPtr[n].b & mask ? WS2812B_PULSE_HIGH : WS2812B_PULSE_LOW;
+				opStatus->firstPartPwmBuf[n].r[i] = opStatus->rgbBufferPtr[n].r & mask ? WS2812B_PULSE_HIGH : WS2812B_PULSE_LOW;
+        opStatus->firstPartPwmBuf[n].g[i] = opStatus->rgbBufferPtr[n].g & mask ? WS2812B_PULSE_HIGH : WS2812B_PULSE_LOW;
+        opStatus->firstPartPwmBuf[n].b[i] = opStatus->rgbBufferPtr[n].b & mask ? WS2812B_PULSE_HIGH : WS2812B_PULSE_LOW;
 
         mask >>= 1;
     }
 	}
 	
-	//Fill dma buffer for the end with low level signal if the rgb buffer is over
+	//Fill dma buffer to the end with low level signal if the rgb buffer is over
 	for(; n < RGB_BUFFER_HALF_SIZE; n++)
 	{
 		for (i = 0; i < 8; i++)
     {
-        wsTxStatus.FirstPartPwmBuf[n].r[i] = WS2812B_NO_PULSE;
-        wsTxStatus.FirstPartPwmBuf[n].g[i] = WS2812B_NO_PULSE;
-        wsTxStatus.FirstPartPwmBuf[n].b[i] = WS2812B_NO_PULSE;
+        opStatus->firstPartPwmBuf[n].r[i] = WS2812B_NO_PULSE;
+        opStatus->firstPartPwmBuf[n].g[i] = WS2812B_NO_PULSE;
+        opStatus->firstPartPwmBuf[n].b[i] = WS2812B_NO_PULSE;
     }
 	}
 	
-	wsTxStatus.ch0ConversionRemain -= convert_size;
-	wsTxStatus.RgbBufferPtr += convert_size;
+	opStatus->conversionRemain -= convert_size;
+	opStatus->rgbBufferPtr += convert_size;
 	
 }
 
-inline void DoConversionRgbToDmaSecondPart()
+inline void DoConversionRgbToDmaSecondPart(WsOperationsStatus *opStatus)
 {
-	uint32_t convert_size = wsTxStatus.ch0ConversionRemain >= RGB_BUFFER_HALF_SIZE ? RGB_BUFFER_HALF_SIZE : wsTxStatus.ch0ConversionRemain;
+	uint32_t convert_size = opStatus->conversionRemain >= RGB_BUFFER_HALF_SIZE ? RGB_BUFFER_HALF_SIZE : opStatus->conversionRemain;
 	
 	uint32_t n;
 	uint32_t i;
@@ -581,9 +447,9 @@ inline void DoConversionRgbToDmaSecondPart()
     
     for (i = 0; i < 8; i++)
     {
-        wsTxStatus.SecondPartPwmBuf[n].r[i] = wsTxStatus.RgbBufferPtr[n].r & mask ? WS2812B_PULSE_HIGH : WS2812B_PULSE_LOW;
-        wsTxStatus.SecondPartPwmBuf[n].g[i] = wsTxStatus.RgbBufferPtr[n].g & mask ? WS2812B_PULSE_HIGH : WS2812B_PULSE_LOW;
-        wsTxStatus.SecondPartPwmBuf[n].b[i] = wsTxStatus.RgbBufferPtr[n].b & mask ? WS2812B_PULSE_HIGH : WS2812B_PULSE_LOW;
+        opStatus->secondPartPwmBuf[n].r[i] = opStatus->rgbBufferPtr[n].r & mask ? WS2812B_PULSE_HIGH : WS2812B_PULSE_LOW;
+        opStatus->secondPartPwmBuf[n].g[i] = opStatus->rgbBufferPtr[n].g & mask ? WS2812B_PULSE_HIGH : WS2812B_PULSE_LOW;
+        opStatus->secondPartPwmBuf[n].b[i] = opStatus->rgbBufferPtr[n].b & mask ? WS2812B_PULSE_HIGH : WS2812B_PULSE_LOW;
 
         mask >>= 1;
     }
@@ -594,22 +460,22 @@ inline void DoConversionRgbToDmaSecondPart()
 	{
 		for (i = 0; i < 8; i++)
     {
-        wsTxStatus.SecondPartPwmBuf[n].r[i] = WS2812B_NO_PULSE;
-        wsTxStatus.SecondPartPwmBuf[n].g[i] = WS2812B_NO_PULSE;
-        wsTxStatus.SecondPartPwmBuf[n].b[i] = WS2812B_NO_PULSE;
+        opStatus->secondPartPwmBuf[n].r[i] = WS2812B_NO_PULSE;
+        opStatus->secondPartPwmBuf[n].g[i] = WS2812B_NO_PULSE;
+        opStatus->secondPartPwmBuf[n].b[i] = WS2812B_NO_PULSE;
     }
 	}
 	
-	wsTxStatus.ch0ConversionRemain -= convert_size;
-	wsTxStatus.RgbBufferPtr += convert_size;
+	opStatus->conversionRemain -= convert_size;
+	opStatus->rgbBufferPtr += convert_size;
 }
 
 //If all data has been transferred return 1 else 0
-inline uint8_t HalfBufferTransfered(void)
+inline uint8_t DidTransmission(WsOperationsStatus *opStatus)
 {
-	wsTxStatus.ch0TransmissionRemain -= wsTxStatus.ch0TransmissionRemain >= RGB_BUFFER_HALF_SIZE ? 
-																			RGB_BUFFER_HALF_SIZE : wsTxStatus.ch0TransmissionRemain;
-	if(wsTxStatus.ch0TransmissionRemain == 0)
+	opStatus->transmissionRemain -= opStatus->transmissionRemain >= RGB_BUFFER_HALF_SIZE ? 
+																			RGB_BUFFER_HALF_SIZE : opStatus->transmissionRemain;
+	if(opStatus->transmissionRemain == 0)
 		return 1;
 		
 	return 0;
@@ -646,27 +512,18 @@ void USART_TransferError_Callback(void)
 //Callbacks for Timer1
 void TIM1_DMA1_HalfTransmit_Callback(void)
 {
-	//DoConversionRgbToDma();
+	
 }
 
 void TIM1_DMA1_TransmitComplete_Callback(void)
 {
-	if(wsTxStatus.endTransactionFlag == 1)
-	{
-		LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_3);
-		LL_TIM_DisableDMAReq_CC2(TIM1);
-		LL_TIM_OC_SetCompareCH2(TIM1, 0);
-	}
-	
-	//DoConversionRgbToDma();
+
 }
 
 void TIM1_TransferError_Callback(void)
 {
 	
 }
-
-/* USER CODE END 4 */
 
 /**
   * @brief  This function is executed in case of error occurrence.
@@ -676,12 +533,10 @@ void TIM1_TransferError_Callback(void)
   */
 void _Error_Handler(char *file, int line)
 {
-  /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
   while(1)
   {
+		
   }
-  /* USER CODE END Error_Handler_Debug */
 }
 
 #ifdef  USE_FULL_ASSERT
@@ -694,19 +549,8 @@ void _Error_Handler(char *file, int line)
   */
 void assert_failed(uint8_t* file, uint32_t line)
 { 
-  /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
      tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
-  /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
 
-/**
-  * @}
-  */
-
-/**
-  * @}
-  */
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

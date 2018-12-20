@@ -20,9 +20,4 @@ void RGB2PWM(RGB_t *rgb, PWM_t *pwm)
     }
 }
 
-void GoSendRGBBuf(RGB_t *rgb)
-{
-	for(uint32_t n = 0; n < RGB_BUFFER_SIZE; n++)
-		RGB2PWM(&rgb[n], &DMABuffer[n]);
 
-}
