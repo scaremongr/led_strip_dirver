@@ -111,8 +111,8 @@ void SystemClock_Config(void)
   NVIC_SetPriority(SysTick_IRQn, 0);
 }
 
-/* TIM1 init function */
-static void MX_TIM1_Init(void)
+/* TIM16 init function */
+static void MX_TIM16_Init(void)
 {
   LL_TIM_InitTypeDef TIM_InitStruct;
   LL_TIM_OC_InitTypeDef TIM_OC_InitStruct;
@@ -121,9 +121,9 @@ static void MX_TIM1_Init(void)
   LL_GPIO_InitTypeDef GPIO_InitStruct;
 
   /* Peripheral clock enable */
-  LL_APB1_GRP2_EnableClock(LL_APB1_GRP2_PERIPH_TIM1);
+  LL_APB1_GRP2_EnableClock(LL_APB1_GRP2_PERIPH_TIM16);
 
-  /* TIM1 DMA Init */
+  /* TIM16 DMA Init */
   LL_DMA_SetDataTransferDirection(DMA1, LL_DMA_CHANNEL_3, LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
   LL_DMA_SetChannelPriorityLevel(DMA1, LL_DMA_CHANNEL_3, LL_DMA_PRIORITY_HIGH);
   LL_DMA_SetMode(DMA1, LL_DMA_CHANNEL_3, LL_DMA_MODE_CIRCULAR);
@@ -134,7 +134,7 @@ static void MX_TIM1_Init(void)
 	
 	LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_3,
                          (uint32_t)&wsTxStatus[0].dmaBuffer,
-                         (uint32_t)&TIM1->CCR2,
+                         (uint32_t)&TIM16->CCR1,
                          LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
 												 
 	LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_3, RGB_BUFFER_SIZE * 24);
@@ -144,17 +144,17 @@ static void MX_TIM1_Init(void)
   LL_DMA_EnableIT_TE(DMA1, LL_DMA_CHANNEL_3);
 	
 
-	/* TIM1_CH2 Init */
+	/* TIM16 Init */
   TIM_InitStruct.Prescaler = 0;
   TIM_InitStruct.CounterMode = LL_TIM_COUNTERMODE_UP;
   TIM_InitStruct.Autoreload = 59;
   TIM_InitStruct.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
   TIM_InitStruct.RepetitionCounter = 0;
-  LL_TIM_Init(TIM1, &TIM_InitStruct);
+  LL_TIM_Init(TIM16, &TIM_InitStruct);
 
-  LL_TIM_DisableARRPreload(TIM1);
+  LL_TIM_DisableARRPreload(TIM16);
 
-  LL_TIM_OC_EnablePreload(TIM1, LL_TIM_CHANNEL_CH2);
+  LL_TIM_OC_EnablePreload(TIM16, LL_TIM_CHANNEL_CH1);
 
   TIM_OC_InitStruct.OCMode = LL_TIM_OCMODE_PWM1;
   TIM_OC_InitStruct.OCState = LL_TIM_OCSTATE_DISABLE;
@@ -164,13 +164,13 @@ static void MX_TIM1_Init(void)
   TIM_OC_InitStruct.OCNPolarity = LL_TIM_OCPOLARITY_HIGH;
   TIM_OC_InitStruct.OCIdleState = LL_TIM_OCIDLESTATE_LOW;
   TIM_OC_InitStruct.OCNIdleState = LL_TIM_OCIDLESTATE_LOW;
-  LL_TIM_OC_Init(TIM1, LL_TIM_CHANNEL_CH2, &TIM_OC_InitStruct);
+  LL_TIM_OC_Init(TIM16, LL_TIM_CHANNEL_CH1, &TIM_OC_InitStruct);
 
-  LL_TIM_OC_DisableFast(TIM1, LL_TIM_CHANNEL_CH2);
+  LL_TIM_OC_DisableFast(TIM16, LL_TIM_CHANNEL_CH1);
 
-  LL_TIM_SetTriggerOutput(TIM1, LL_TIM_TRGO_RESET);
+  LL_TIM_SetTriggerOutput(TIM16, LL_TIM_TRGO_RESET);
 
-  LL_TIM_DisableMasterSlaveMode(TIM1);
+  LL_TIM_DisableMasterSlaveMode(TIM16);
 
   TIM_BDTRInitStruct.OSSRState = LL_TIM_OSSR_DISABLE;
   TIM_BDTRInitStruct.OSSIState = LL_TIM_OSSI_DISABLE;
@@ -179,12 +179,95 @@ static void MX_TIM1_Init(void)
   TIM_BDTRInitStruct.BreakState = LL_TIM_BREAK_DISABLE;
   TIM_BDTRInitStruct.BreakPolarity = LL_TIM_BREAK_POLARITY_HIGH;
   TIM_BDTRInitStruct.AutomaticOutput = LL_TIM_AUTOMATICOUTPUT_DISABLE;
-  LL_TIM_BDTR_Init(TIM1, &TIM_BDTRInitStruct);
+  LL_TIM_BDTR_Init(TIM16, &TIM_BDTRInitStruct);
 
-  /**TIM1 GPIO Configuration  
-  PA9   ------> TIM1_CH2 
+  /**TIM16 GPIO Configuration  
+  PA6   ------> TIM16_CH1 
   */
-  GPIO_InitStruct.Pin = LL_GPIO_PIN_9;
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_6;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_HIGH;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_2;
+	
+  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+}
+
+/* TIM17 init function */
+static void MX_TIM17_Init(void)
+{
+  LL_TIM_InitTypeDef TIM_InitStruct;
+  LL_TIM_OC_InitTypeDef TIM_OC_InitStruct;
+  LL_TIM_BDTR_InitTypeDef TIM_BDTRInitStruct;
+
+  LL_GPIO_InitTypeDef GPIO_InitStruct;
+
+  /* Peripheral clock enable */
+  LL_APB1_GRP2_EnableClock(LL_APB1_GRP2_PERIPH_TIM17);
+
+  /* TIM17 DMA Init */
+  LL_DMA_SetDataTransferDirection(DMA1, LL_DMA_CHANNEL_1, LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
+  LL_DMA_SetChannelPriorityLevel(DMA1, LL_DMA_CHANNEL_1, LL_DMA_PRIORITY_HIGH);
+  LL_DMA_SetMode(DMA1, LL_DMA_CHANNEL_1, LL_DMA_MODE_CIRCULAR);
+  LL_DMA_SetPeriphIncMode(DMA1, LL_DMA_CHANNEL_1, LL_DMA_PERIPH_NOINCREMENT);
+  LL_DMA_SetMemoryIncMode(DMA1, LL_DMA_CHANNEL_1, LL_DMA_MEMORY_INCREMENT);
+  LL_DMA_SetPeriphSize(DMA1, LL_DMA_CHANNEL_1, LL_DMA_PDATAALIGN_HALFWORD);
+  LL_DMA_SetMemorySize(DMA1, LL_DMA_CHANNEL_1, LL_DMA_MDATAALIGN_BYTE);
+	
+	LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_1,
+                         (uint32_t)&wsTxStatus[0].dmaBuffer,
+                         (uint32_t)&TIM17->CCR1,
+                         LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
+												 
+	LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_1, RGB_BUFFER_SIZE * 24);
+	
+	LL_DMA_EnableIT_HT(DMA1, LL_DMA_CHANNEL_1);
+	LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_1);
+  LL_DMA_EnableIT_TE(DMA1, LL_DMA_CHANNEL_1);
+	
+
+	/* TIM17 Init */
+  TIM_InitStruct.Prescaler = 0;
+  TIM_InitStruct.CounterMode = LL_TIM_COUNTERMODE_UP;
+  TIM_InitStruct.Autoreload = 59;
+  TIM_InitStruct.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
+  TIM_InitStruct.RepetitionCounter = 0;
+  LL_TIM_Init(TIM17, &TIM_InitStruct);
+
+  LL_TIM_DisableARRPreload(TIM17);
+
+  LL_TIM_OC_EnablePreload(TIM17, LL_TIM_CHANNEL_CH1);
+
+  TIM_OC_InitStruct.OCMode = LL_TIM_OCMODE_PWM1;
+  TIM_OC_InitStruct.OCState = LL_TIM_OCSTATE_DISABLE;
+  TIM_OC_InitStruct.OCNState = LL_TIM_OCSTATE_DISABLE;
+  TIM_OC_InitStruct.CompareValue = 0;
+  TIM_OC_InitStruct.OCPolarity = LL_TIM_OCPOLARITY_HIGH;
+  TIM_OC_InitStruct.OCNPolarity = LL_TIM_OCPOLARITY_HIGH;
+  TIM_OC_InitStruct.OCIdleState = LL_TIM_OCIDLESTATE_LOW;
+  TIM_OC_InitStruct.OCNIdleState = LL_TIM_OCIDLESTATE_LOW;
+  LL_TIM_OC_Init(TIM17, LL_TIM_CHANNEL_CH1, &TIM_OC_InitStruct);
+
+  LL_TIM_OC_DisableFast(TIM17, LL_TIM_CHANNEL_CH1);
+
+  LL_TIM_SetTriggerOutput(TIM17, LL_TIM_TRGO_RESET);
+
+  LL_TIM_DisableMasterSlaveMode(TIM17);
+
+  TIM_BDTRInitStruct.OSSRState = LL_TIM_OSSR_DISABLE;
+  TIM_BDTRInitStruct.OSSIState = LL_TIM_OSSI_DISABLE;
+  TIM_BDTRInitStruct.LockLevel = LL_TIM_LOCKLEVEL_OFF;
+  TIM_BDTRInitStruct.DeadTime = 0;
+  TIM_BDTRInitStruct.BreakState = LL_TIM_BREAK_DISABLE;
+  TIM_BDTRInitStruct.BreakPolarity = LL_TIM_BREAK_POLARITY_HIGH;
+  TIM_BDTRInitStruct.AutomaticOutput = LL_TIM_AUTOMATICOUTPUT_DISABLE;
+  LL_TIM_BDTR_Init(TIM17, &TIM_BDTRInitStruct);
+
+  /**TIM17 GPIO Configuration  
+  PA7   ------> TIM17_CH1 
+  */
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_7;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_HIGH;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
