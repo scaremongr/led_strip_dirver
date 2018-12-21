@@ -58,12 +58,13 @@ void DMA1_Channel2_3_IRQHandler(void)
 
 		if(DidTransmission(&wsTxStatus[0]) == 1)
 		{
-			Timer1DmaStop();
+			Timer16DmaStop();
+			
 			StartUartRxTransfers();
 		}
 
 		DoConversionRgbToDmaFirstPart(&wsTxStatus[0]);
-		DoConversionRgbToDmaFirstPart(&wsTxStatus[1]);
+		//DoConversionRgbToDmaFirstPart(&wsTxStatus[1]);
   }
 	else if(LL_DMA_IsActiveFlag_TC3(DMA1))
 	{
@@ -71,12 +72,13 @@ void DMA1_Channel2_3_IRQHandler(void)
 
 		if(DidTransmission(&wsTxStatus[0]) == 1)
 		{
-			Timer1DmaStop();
+			Timer16DmaStop();
+	
 			StartUartRxTransfers();
 		}
 	
 		DoConversionRgbToDmaSecondPart(&wsTxStatus[0]);
-		DoConversionRgbToDmaSecondPart(&wsTxStatus[1]);
+		//DoConversionRgbToDmaSecondPart(&wsTxStatus[1]);
 	}
   else if(LL_DMA_IsActiveFlag_TE3(DMA1))
   {

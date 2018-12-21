@@ -13,7 +13,8 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_USART1_UART_Init(void);
-static void MX_TIM1_Init(void);
+static void MX_TIM16_Init(void);
+static void MX_TIM17_Init(void);
 
 
 
@@ -33,7 +34,8 @@ int main(void)
   MX_GPIO_Init();
   MX_DMA_Init();
   MX_USART1_UART_Init();
-  MX_TIM1_Init();
+  MX_TIM16_Init();
+	MX_TIM17_Init();
 
 	/* Start waiting for data form uart */
 	StartUartRxTransfers();	
@@ -136,8 +138,6 @@ static void MX_TIM16_Init(void)
                          (uint32_t)&wsTxStatus[0].dmaBuffer,
                          (uint32_t)&TIM16->CCR1,
                          LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
-												 
-	LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_3, RGB_BUFFER_SIZE * 24);
 	
 	LL_DMA_EnableIT_HT(DMA1, LL_DMA_CHANNEL_3);
 	LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_3);
@@ -168,9 +168,9 @@ static void MX_TIM16_Init(void)
 
   LL_TIM_OC_DisableFast(TIM16, LL_TIM_CHANNEL_CH1);
 
-  LL_TIM_SetTriggerOutput(TIM16, LL_TIM_TRGO_RESET);
+//  LL_TIM_SetTriggerOutput(TIM16, LL_TIM_TRGO_RESET);
 
-  LL_TIM_DisableMasterSlaveMode(TIM16);
+//  LL_TIM_DisableMasterSlaveMode(TIM16);
 
   TIM_BDTRInitStruct.OSSRState = LL_TIM_OSSR_DISABLE;
   TIM_BDTRInitStruct.OSSIState = LL_TIM_OSSI_DISABLE;
@@ -189,7 +189,7 @@ static void MX_TIM16_Init(void)
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_HIGH;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  GPIO_InitStruct.Alternate = LL_GPIO_AF_2;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_5;
 	
   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 }
@@ -207,24 +207,24 @@ static void MX_TIM17_Init(void)
   LL_APB1_GRP2_EnableClock(LL_APB1_GRP2_PERIPH_TIM17);
 
   /* TIM17 DMA Init */
-  LL_DMA_SetDataTransferDirection(DMA1, LL_DMA_CHANNEL_1, LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
-  LL_DMA_SetChannelPriorityLevel(DMA1, LL_DMA_CHANNEL_1, LL_DMA_PRIORITY_HIGH);
-  LL_DMA_SetMode(DMA1, LL_DMA_CHANNEL_1, LL_DMA_MODE_CIRCULAR);
-  LL_DMA_SetPeriphIncMode(DMA1, LL_DMA_CHANNEL_1, LL_DMA_PERIPH_NOINCREMENT);
-  LL_DMA_SetMemoryIncMode(DMA1, LL_DMA_CHANNEL_1, LL_DMA_MEMORY_INCREMENT);
-  LL_DMA_SetPeriphSize(DMA1, LL_DMA_CHANNEL_1, LL_DMA_PDATAALIGN_HALFWORD);
-  LL_DMA_SetMemorySize(DMA1, LL_DMA_CHANNEL_1, LL_DMA_MDATAALIGN_BYTE);
+  LL_DMA_SetDataTransferDirection(DMA1, LL_DMA_CHANNEL_2, LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
+  LL_DMA_SetChannelPriorityLevel(DMA1, LL_DMA_CHANNEL_2, LL_DMA_PRIORITY_HIGH);
+  LL_DMA_SetMode(DMA1, LL_DMA_CHANNEL_2, LL_DMA_MODE_CIRCULAR);
+  LL_DMA_SetPeriphIncMode(DMA1, LL_DMA_CHANNEL_2, LL_DMA_PERIPH_NOINCREMENT);
+  LL_DMA_SetMemoryIncMode(DMA1, LL_DMA_CHANNEL_2, LL_DMA_MEMORY_INCREMENT);
+  LL_DMA_SetPeriphSize(DMA1, LL_DMA_CHANNEL_2, LL_DMA_PDATAALIGN_HALFWORD);
+  LL_DMA_SetMemorySize(DMA1, LL_DMA_CHANNEL_2, LL_DMA_MDATAALIGN_BYTE);
 	
-	LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_1,
-                         (uint32_t)&wsTxStatus[0].dmaBuffer,
+	LL_SYSCFG_SetRemapDMA_TIM(LL_SYSCFG_TIM17_RMP_DMA1_CH2);
+	
+	LL_DMA_ConfigAddresses(DMA1, LL_DMA_CHANNEL_2,
+                         (uint32_t)&wsTxStatus[1].dmaBuffer,
                          (uint32_t)&TIM17->CCR1,
                          LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
-												 
-	LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_1, RGB_BUFFER_SIZE * 24);
 	
-	LL_DMA_EnableIT_HT(DMA1, LL_DMA_CHANNEL_1);
-	LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_1);
-  LL_DMA_EnableIT_TE(DMA1, LL_DMA_CHANNEL_1);
+	LL_DMA_EnableIT_HT(DMA1, LL_DMA_CHANNEL_2);
+	LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_2);
+  LL_DMA_EnableIT_TE(DMA1, LL_DMA_CHANNEL_2);
 	
 
 	/* TIM17 Init */
@@ -272,7 +272,7 @@ static void MX_TIM17_Init(void)
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_HIGH;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
-  GPIO_InitStruct.Alternate = LL_GPIO_AF_2;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_5;
 	
   LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 }
@@ -420,35 +420,66 @@ void StopUartRxTransfer(void)
   LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_5);
 }
 
-void Timer1DmaStart()
+void Timer16DmaStart(void)
 {
 	/* Set data transfer length */
 	LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_3, RGB_BUFFER_SIZE * 24);
 	
   /* Enable TIM1 channel 3 */
-  LL_TIM_CC_EnableChannel(TIM1, LL_TIM_CHANNEL_CH2);
+  LL_TIM_CC_EnableChannel(TIM16, LL_TIM_CHANNEL_CH1);
   
   /* Enable TIM1 outputs */
-  LL_TIM_EnableAllOutputs(TIM1);
+  LL_TIM_EnableAllOutputs(TIM16);
   
   /* Enable counter */
-  LL_TIM_EnableCounter(TIM1);
+  LL_TIM_EnableCounter(TIM16);
   
   /* Force update generation */
-  LL_TIM_GenerateEvent_UPDATE(TIM1);
+  LL_TIM_GenerateEvent_UPDATE(TIM16);
 		
-	LL_TIM_EnableDMAReq_CC2(TIM1);
+	LL_TIM_EnableDMAReq_CC1(TIM16);
 	
-	LL_TIM_EnableARRPreload(TIM1);
+	LL_TIM_EnableARRPreload(TIM16);
 	
 	LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_3);
 }
 
-void Timer1DmaStop(void)
+void Timer17DmaStart(void)
+{
+		/* Set data transfer length */
+	LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_2, RGB_BUFFER_SIZE * 24);
+	
+  /* Enable TIM1 channel 3 */
+	LL_TIM_CC_EnableChannel(TIM17, LL_TIM_CHANNEL_CH1);
+  
+  /* Enable TIM1 outputs */
+	LL_TIM_EnableAllOutputs(TIM17);
+  
+  /* Enable counter */
+	LL_TIM_EnableCounter(TIM17);
+  
+  /* Force update generation */
+	LL_TIM_GenerateEvent_UPDATE(TIM17);
+		
+	LL_TIM_EnableDMAReq_CC1(TIM17);
+	
+	LL_TIM_EnableARRPreload(TIM17);
+	
+	LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_2);
+}
+
+void Timer16DmaStop(void)
 {
 	LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_3);
 	
-	LL_TIM_OC_SetCompareCH2(TIM1, WS2812B_NO_PULSE);
+	LL_TIM_OC_SetCompareCH2(TIM16, WS2812B_NO_PULSE);
+}
+
+void Timer17DmaStop(void)
+{
+	LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_2);
+	
+	LL_TIM_OC_SetCompareCH2(TIM17, WS2812B_NO_PULSE);
 }
 
 //---------------------------------------------------
@@ -480,9 +511,8 @@ void WS2812InitFirstTransaction(void)
 	DoConversionRgbToDmaFirstPart(&wsTxStatus[1]);
 	DoConversionRgbToDmaSecondPart(&wsTxStatus[1]);
 	
-	Timer1DmaStart();
+	Timer16DmaStart();
 }
-
 
 inline void DoConversionRgbToDmaFirstPart(WsOperationsStatus *opStatus)
 {

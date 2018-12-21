@@ -62,8 +62,10 @@ uint8_t DidTransmission(WsOperationsStatus *opStatus);
 void StartUartRxTransfers(void);
 void StartUartTxTransfers(void);
 
-void Timer1DmaStart(void);
-void Timer1DmaStop(void);
+void Timer16DmaStart(void);
+void Timer17DmaStart(void);
+void Timer16DmaStop(void);
+void Timer17DmaStop(void);
 
 #ifdef __cplusplus
  extern "C" {
