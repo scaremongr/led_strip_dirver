@@ -3,7 +3,6 @@
 #include "stm32f0xx.h"
 #include "stm32f0xx_it.h"
 
-#include "bit_ops.h"
 
 /**
 * @brief This function handles Non maskable interrupt.
@@ -64,6 +63,7 @@ void DMA1_Channel2_3_IRQHandler(void)
 		}
 
 		DoConversionRgbToDmaFirstPart(&wsTxStatus[0]);
+		DoConversionRgbToDmaFirstPart(&wsTxStatus[1]);
   }
 	else if(LL_DMA_IsActiveFlag_TC3(DMA1))
 	{
@@ -76,6 +76,7 @@ void DMA1_Channel2_3_IRQHandler(void)
 		}
 	
 		DoConversionRgbToDmaSecondPart(&wsTxStatus[0]);
+		DoConversionRgbToDmaSecondPart(&wsTxStatus[1]);
 	}
   else if(LL_DMA_IsActiveFlag_TE3(DMA1))
   {
