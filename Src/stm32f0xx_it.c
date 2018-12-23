@@ -56,35 +56,43 @@ void DMA1_Channel2_3_IRQHandler(void)
   {
 		LL_DMA_ClearFlag_GI3(DMA1);
 
-		if(DidTransmission(&wsTxStatus[0]) == 1)
-		{
-			Timer16DmaStop();
-			
-			StartUartRxTransfers();
-		}
-
 		DoConversionRgbToDmaFirstPart(&wsTxStatus[0]);
-		//DoConversionRgbToDmaFirstPart(&wsTxStatus[1]);
   }
+	else if(LL_DMA_IsActiveFlag_HT2(DMA1))
+  {
+		LL_DMA_ClearFlag_GI2(DMA1);
+
+		DoConversionRgbToDmaFirstPart(&wsTxStatus[1]);
+  }
+	
 	else if(LL_DMA_IsActiveFlag_TC3(DMA1))
 	{
 		LL_DMA_ClearFlag_GI3(DMA1);
-
-		if(DidTransmission(&wsTxStatus[0]) == 1)
-		{
-			Timer16DmaStop();
-	
-			StartUartRxTransfers();
-		}
 	
 		DoConversionRgbToDmaSecondPart(&wsTxStatus[0]);
-		//DoConversionRgbToDmaSecondPart(&wsTxStatus[1]);
 	}
+	
+	else if(LL_DMA_IsActiveFlag_TC2(DMA1))
+	{
+		LL_DMA_ClearFlag_GI2(DMA1);
+	
+		DoConversionRgbToDmaSecondPart(&wsTxStatus[1]);
+	}
+	
   else if(LL_DMA_IsActiveFlag_TE3(DMA1))
   {
     /* Call Error function */
     TIM1_TransferError_Callback();
   }
+	
+	/* If first and second cannels transfer complete get new data from uart */
+	if(DidTransmission(&wsTxStatus[0]) == 1 && DidTransmission(&wsTxStatus[1]) == 1)
+	{
+		Timer16DmaStop();
+		Timer17DmaStop();
+		
+		StartUartRxTransfers();
+	}
 }
 
 /**

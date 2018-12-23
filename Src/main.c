@@ -512,6 +512,7 @@ void WS2812InitFirstTransaction(void)
 	DoConversionRgbToDmaSecondPart(&wsTxStatus[1]);
 	
 	Timer16DmaStart();
+	Timer17DmaStart();
 }
 
 inline void DoConversionRgbToDmaFirstPart(WsOperationsStatus *opStatus)
